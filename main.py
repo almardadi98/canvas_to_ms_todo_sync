@@ -49,14 +49,16 @@ def make_course_task_list(todo_client: ToDoConnection, courses: list[Course]):
 
 
 def sync_assignments_to_ms_todo(todo_client: ToDoConnection, assignments: list[Assignment], course_id_to_list_id_dict: dict):
+    # Get tasks from task lists associated with a canvas course.
     all_tasks = [todo_client.get_tasks(
         list_id, status="all") for list_id in course_id_to_list_id_dict.values()]
+    # Use chain to flatten the list and grab the task titles only
     all_task_titles = [task.title.lower() for task in list(chain(*all_tasks))]
     for assignment in assignments:
         # Skip if already in ms todo
         if assignment.name.lower() in all_task_titles:
             continue
-        # If assignment doesn't have a due date
+        # If assignment doesn't have a due date; Set it to None
         due_date = None if assignment.due_at is None else assignment.due_at_date
         todo_client.create_task(title=assignment.name,
                                 list_id=course_id_to_list_id_dict[assignment.course_id],
@@ -65,6 +67,7 @@ def sync_assignments_to_ms_todo(todo_client: ToDoConnection, assignments: list[A
 
 
 def make_course_id_to_list_id_dict(course_dict, task_lists) -> dict:
+    """ Maps canvas course ids to MS To-Do list ids """
     course_id_to_list_id_dict = {}
     for course_name, course_id in course_dict.items():
         for task_list in task_lists:
