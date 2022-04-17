@@ -101,7 +101,7 @@ def main():
         sync_assignments_to_ms_todo(todo_client,
                                     canvas_assignments,
                                     course_id_to_list_id_dict)
-        time.sleep(1500)
+        time.sleep(900)
 
 
 if __name__ == "__main__":
