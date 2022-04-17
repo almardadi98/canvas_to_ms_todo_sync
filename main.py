@@ -46,12 +46,22 @@ def make_course_task_list(todo_client: ToDoConnection, courses: list[Course]):
     return task_lists
 
 
-def sync_assignments_to_ms_todo(todo_client: ToDoConnection, assignments: list[Assignment], course_id_to_list_id_dict: dict):
+def get_all_task_titles(todo_client: ToDoConnection,
+                        course_id_to_list_id_dict: dict) -> list[str]:
+    """ The titles are used to determine if the assignment has already been synced to MS To-Do"""
     # Get tasks from task lists associated with a canvas course.
     all_tasks = [todo_client.get_tasks(
         list_id, status="all") for list_id in course_id_to_list_id_dict.values()]
     # Use chain to flatten the list and grab the task titles only
     all_task_titles = [task.title.lower() for task in list(chain(*all_tasks))]
+    return all_task_titles
+
+
+def sync_assignments_to_ms_todo(todo_client: ToDoConnection,
+                                assignments: list[Assignment],
+                                course_id_to_list_id_dict: dict):
+    all_task_titles = get_all_task_titles(
+        todo_client, course_id_to_list_id_dict)
     for assignment in assignments:
         # Skip if already in ms todo
         if assignment.name.lower() in all_task_titles:
@@ -84,10 +94,11 @@ def main():
     todo_client = connect_to_ms_todo()
     # Create task lists if it does not already exist
     task_lists = make_course_task_list(todo_client, courses)
-    course_id_to_list_id_dict = make_course_id_to_list_id_dict(
-        course_dict, task_lists)
-    sync_assignments_to_ms_todo(
-        todo_client, canvas_assignments, course_id_to_list_id_dict)
+    course_id_to_list_id_dict = make_course_id_to_list_id_dict(course_dict,
+                                                               task_lists)
+    sync_assignments_to_ms_todo(todo_client,
+                                canvas_assignments,
+                                course_id_to_list_id_dict)
 
 
 if __name__ == "__main__":
