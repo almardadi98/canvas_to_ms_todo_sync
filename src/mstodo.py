@@ -1,7 +1,7 @@
 import json
+import pickle
 from pymstodo import ToDoConnection
 from models.ms_todo_settings import MSTODOSettings
-import pickle
 
 
 def get_ms_todo_settings() -> MSTODOSettings:

@@ -1,11 +1,9 @@
-from datetime import datetime
 import json
 from itertools import chain
 from canvasapi import Canvas
 from canvasapi.course import Course
-from canvasapi.paginated_list import PaginatedList
 from canvasapi.assignment import Assignment
-from pymstodo import ToDoConnection, Task, TaskList
+from pymstodo import ToDoConnection
 from models.canvas_settings import CanvasSettings
 from src.mstodo import connect_to_ms_todo
 
