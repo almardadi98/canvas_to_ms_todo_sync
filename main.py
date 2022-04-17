@@ -1,4 +1,5 @@
 import json
+import time
 from itertools import chain
 from canvasapi import Canvas
 from canvasapi.course import Course
@@ -46,6 +47,16 @@ def make_course_task_list(todo_client: ToDoConnection, courses: list[Course]):
     return task_lists
 
 
+def make_course_id_to_list_id_dict(course_dict, task_lists) -> dict:
+    """ Maps canvas course ids to MS To-Do list ids """
+    course_id_to_list_id_dict = {}
+    for course_name, course_id in course_dict.items():
+        for task_list in task_lists:
+            if course_name.lower() == task_list.displayName.lower():
+                course_id_to_list_id_dict[course_id] = task_list.list_id
+    return course_id_to_list_id_dict
+
+
 def get_all_task_titles(todo_client: ToDoConnection,
                         course_id_to_list_id_dict: dict) -> list[str]:
     """ The titles are used to determine if the assignment has already been synced to MS To-Do"""
@@ -74,16 +85,6 @@ def sync_assignments_to_ms_todo(todo_client: ToDoConnection,
                                 body_text=assignment.html_url)
 
 
-def make_course_id_to_list_id_dict(course_dict, task_lists) -> dict:
-    """ Maps canvas course ids to MS To-Do list ids """
-    course_id_to_list_id_dict = {}
-    for course_name, course_id in course_dict.items():
-        for task_list in task_lists:
-            if course_name.lower() == task_list.displayName.lower():
-                course_id_to_list_id_dict[course_id] = task_list.list_id
-    return course_id_to_list_id_dict
-
-
 def main():
     course_dict = get_courses_to_sync()
     # Get course name to course id dict
@@ -96,9 +97,11 @@ def main():
     task_lists = make_course_task_list(todo_client, courses)
     course_id_to_list_id_dict = make_course_id_to_list_id_dict(course_dict,
                                                                task_lists)
-    sync_assignments_to_ms_todo(todo_client,
-                                canvas_assignments,
-                                course_id_to_list_id_dict)
+    while True:
+        sync_assignments_to_ms_todo(todo_client,
+                                    canvas_assignments,
+                                    course_id_to_list_id_dict)
+        time.sleep(1500)
 
 
 if __name__ == "__main__":
