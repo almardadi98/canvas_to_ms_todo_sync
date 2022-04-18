@@ -1,5 +1,4 @@
 import json
-# Import the Canvas class
 from canvasapi import Canvas
 
 
