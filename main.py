@@ -1,18 +1,19 @@
 import json
 import time
+import logging
 from itertools import chain
-from canvasapi import Canvas
 from canvasapi.course import Course
 from canvasapi.assignment import Assignment
 from pymstodo import ToDoConnection
-from models.canvas_settings import CanvasSettings
-from src.mstodo import connect_to_ms_todo
+from src.canvas_connect import connect_to_canvas
+from src.mstodo_connect import connect_to_ms_todo
 
 
 def get_courses_to_sync(path="./conf/canvas_to_ms_todo_settings.json") -> dict:
     with open(path, "r", encoding="UTF-8") as file:
         settings = json.load(file)
-    courses_to_sync = settings["CoursesToSync"]
+    courses_to_sync = settings["CoursesToSync"]  # TODO modelify
+    logging.info(f"settings successfully read from {path}")
     return courses_to_sync
 
 
@@ -27,6 +28,7 @@ def get_canvas_assignments(courses: list[Course]) -> list[Assignment]:
     all_assignments = []
     for course_assignments in paginated_course_assignments:
         all_assignments.extend(iter(course_assignments))
+    logging.info(f"Got {len(all_assignments)} assignments from canvas.")
     return all_assignments
 
 
@@ -40,9 +42,12 @@ def make_course_task_list(todo_client: ToDoConnection, courses: list[Course]):
     for course in courses:
         if course.name not in task_list_names:
             todo_client.create_list(course.name)
+            logging.info(f"Created new list {course.name} in MS To-Do.")
             modified = True
+        logging.info(f"Task list for course {course.name} already exists.")
     # Update Task List before returning
     if modified:
+        logging.debug("Task list was modified.")
         task_lists = todo_client.get_lists()
     return task_lists
 
@@ -72,10 +77,13 @@ def sync_assignments_to_ms_todo(todo_client: ToDoConnection,
                                 assignments: list[Assignment],
                                 course_id_to_list_id_dict: dict):
     all_task_titles = get_all_task_titles(
-        todo_client, course_id_to_list_id_dict)
+        todo_client,
+        course_id_to_list_id_dict)
     for assignment in assignments:
         # Skip if already in ms todo
         if assignment.name.lower() in all_task_titles:
+            logging.info(
+                f"Skipping assignment '{assignment.name}'. Already in MS To-Do")
             continue
         # If assignment doesn't have a due date; Set it to None
         due_date = None if assignment.due_at is None else assignment.due_at_date
@@ -83,12 +91,15 @@ def sync_assignments_to_ms_todo(todo_client: ToDoConnection,
                                 list_id=course_id_to_list_id_dict[assignment.course_id],
                                 due_date=due_date,
                                 body_text=assignment.html_url)
+        logging.info(f"Task '{assignment.name} created.'")
 
 
 def main():
+    canvas_client = connect_to_canvas()
     course_dict = get_courses_to_sync()
     # Get course name to course id dict
-    courses = [canvas.get_course(id) for name, id in course_dict.items()]
+    courses = [canvas_client.get_course(id)
+               for name, id in course_dict.items()]
     # All assignments for courses in the list
     canvas_assignments = get_canvas_assignments(courses)
     # Establish connection to MS Graph API
@@ -101,18 +112,14 @@ def main():
         sync_assignments_to_ms_todo(todo_client,
                                     canvas_assignments,
                                     course_id_to_list_id_dict)
-        time.sleep(900)
+        SLEEPSECONDS = 900
+        logging.info(f"Sleeping for {SLEEPSECONDS} seconds.")
+        time.sleep(SLEEPSECONDS)
 
 
 if __name__ == "__main__":
-    with open("./conf/canvas_settings.json", "r", encoding="UTF-8") as canvas_file:
-        canvas_settings = CanvasSettings(**json.load(canvas_file))
-    # Canvas API URL
-    API_URL = canvas_settings.API_URL
-    # Canvas API key
-    API_KEY = canvas_settings.API_KEY
-
-    # Initialize a new Canvas object
-    canvas = Canvas(API_URL, API_KEY)
-
+    logging.basicConfig(filename="./data/canvas_to_ms_todo.log",
+                        filemode="a",
+                        encoding="UTF-8",
+                        level=logging.INFO)
     main()
