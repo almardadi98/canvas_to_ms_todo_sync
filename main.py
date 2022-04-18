@@ -59,6 +59,8 @@ def make_course_id_to_list_id_dict(course_dict, task_lists) -> dict:
         for task_list in task_lists:
             if course_name.lower() == task_list.displayName.lower():
                 course_id_to_list_id_dict[course_id] = task_list.list_id
+                logging.debug(
+                    f"Mapping course id '{course_id}' to list id '{task_list.list_id}'")
     return course_id_to_list_id_dict
 
 
